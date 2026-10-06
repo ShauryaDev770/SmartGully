@@ -49,6 +49,44 @@ export async function fetchStats() {
   return data;
 }
 
+export async function geocodeAddress({ address, city, q } = {}) {
+  // First attempt via backend proxy
+  try {
+    const params = {};
+    if (address) params.address = address;
+    if (city) params.city = city;
+    if (q) params.q = q;
+    const { data } = await client.get("/api/geocode", { params });
+    if (Array.isArray(data) && data.length > 0) {
+      return data;
+    }
+  } catch (err) {
+    console.warn("Backend geocoding failed or unreachable, trying direct OSM Nominatim fallback...", err);
+  }
+
+  // Fallback direct to OpenStreetMap Nominatim
+  const parts = [address, city, "India"].filter((p) => p && p.trim());
+  const query = q || parts.join(", ");
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&countrycodes=in&addressdetails=1`;
+  const res = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+    },
+  });
+  if (!res.ok) {
+    throw new Error("Unable to contact geocoding service.");
+  }
+  const items = await res.json();
+  return items.map((item) => ({
+    lat: parseFloat(item.lat),
+    lng: parseFloat(item.lon),
+    display_name: item.display_name,
+    type: item.type,
+    importance: item.importance,
+  }));
+}
+
 export function exportCsvUrl() {
   return `${API_URL}/api/export.csv`;
 }
+

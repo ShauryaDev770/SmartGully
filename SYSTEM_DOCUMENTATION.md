@@ -10,7 +10,10 @@
 **SmartGully** is a full-stack civic infrastructure platform designed to address the severe road safety and maintenance crisis across Indian cities and highways. 
 
 In traditional municipal setups, road damage reporting is cumbersome, lacks precise geolocation, suffers from spam/fake uploads, and overwhelms human reviewers. SmartGully solves this through an automated, end-to-end civic pipeline:
-1. **Citizen Capture**: A citizen opens the web app on their phone, snaps a photo directly via the camera, and their precise GPS coordinates are captured automatically.
+1. **Citizen Capture & Hybrid Geolocation**: A citizen opens the web app on their phone, snaps a photo directly via the camera, and supplies location through three flexible methods:
+   - **Automatic Device GPS**: Instant high-accuracy coordinate locking.
+   - **Open-Source Address Geocoder**: Converts typed City Name and Address/Landmark to coordinates via OpenStreetMap Nominatim.
+   - **Direct Coordinate Entry**: Manual Latitude and Longitude input with preset Indian city pickers.
 2. **Instant Enqueueing**: Reports are ingested with `status="pending"`, immediate receipt verification, and zero blocking of the API.
 3. **Multi-Stage AI Worker**: An asynchronous background worker triages pending reports into clear actionable categories (**Red**: Urgent/Severe, **Yellow**: Minor/Review needed, **Green**: Ignored/Not a road/Duplicate) using explainable transparent rules.
 4. **Public Heatmap**: Processed reports are rendered on an interactive OpenStreetMap heatmap with dynamic crowd-validation weighting.
