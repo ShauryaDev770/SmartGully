@@ -84,6 +84,13 @@ const I18N = {
     sourceManual: "Manual Coords",
     viewOnOsm: "Verify on Map",
     
+    // Pre-Upload Deletion & Security
+    deletePhoto: "Delete Photo",
+    discardDraft: "Discard Photo",
+    preUploadNotice: "Pre-upload deletion available. Once submitted, reports are permanently locked to prevent data manipulation.",
+    recordLockedTitle: "Immutable Civic Record",
+    recordLockedMsg: "This report has been uploaded and permanently registered for AI triage. Uploaded reports cannot be edited or deleted to prevent data manipulation.",
+
     submit: "Submit Report",
     uploading: "Uploading report…",
     errorNoFile: "Please take or choose a photo first.",
@@ -150,6 +157,13 @@ const I18N = {
     sourceManual: "मैन्युअल इनपुट",
     viewOnOsm: "मानचित्र पर जांचें",
     
+    // Pre-Upload Deletion & Security (Hindi)
+    deletePhoto: "फोटो हटाएं",
+    discardDraft: "फोटो रद्द करें",
+    preUploadNotice: "अपलोड से पहले हटाने का विकल्प उपलब्ध है। सबमिट होने के बाद डेटा में छेड़छाड़ रोकने के लिए रिपोर्ट स्थायी रूप से लॉक हो जाती है।",
+    recordLockedTitle: "स्थायी नागरिक रिकॉर्ड",
+    recordLockedMsg: "यह रिपोर्ट AI जांच के लिए स्थायी रूप से दर्ज हो गई है। डेटा हेरफेर रोकने के लिए सबमिट रिपोर्ट को हटाया या बदला नहीं जा सकता।",
+
     submit: "शिकायत दर्ज करें",
     uploading: "अपलोड हो रहा है…",
     errorNoFile: "कृपया पहले एक फोटो लें या चुनें।",
@@ -246,6 +260,17 @@ export default function ReportPage() {
     setLiveReport(null);
     setError("");
     requestLocation();
+  };
+
+  const deletePhoto = () => {
+    if (preview && preview.startsWith("blob:")) {
+      URL.revokeObjectURL(preview);
+    }
+    setFile(null);
+    setPreview("");
+    setError("");
+    if (galleryRef.current) galleryRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
   };
 
   const onFile = (e) => {
@@ -505,6 +530,17 @@ export default function ReportPage() {
                 <span>{t.analyzing}</span>
               </div>
             )}
+
+            {/* Immutable Record Notice */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-left text-xs space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                <span>🔒</span>
+                <span>{t.recordLockedTitle}</span>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                {t.recordLockedMsg}
+              </p>
+            </div>
           </div>
 
           <div className="space-y-2 pt-2">
@@ -628,23 +664,57 @@ export default function ReportPage() {
             <div className="space-y-2">
               <div className="relative rounded-xl overflow-hidden border border-slate-200 max-h-64 flex items-center justify-center bg-black">
                 <img src={preview} alt="preview" className="object-contain max-h-64 w-full" />
-              </div>
-              <p className="text-xs font-semibold text-slate-600">{t.selectedImage}</p>
-              <div className="grid grid-cols-2 gap-2">
+                {/* Floating Delete Button (Available Only Before Uploading) */}
                 <button
                   type="button"
-                  className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
+                  onClick={deletePhoto}
+                  className="absolute top-2.5 right-2.5 bg-red-600/90 hover:bg-red-700 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-md transition flex items-center gap-1.5 backdrop-blur-sm cursor-pointer z-10"
+                  title={t.deletePhoto}
+                >
+                  <span>🗑️</span>
+                  <span>{t.deletePhoto}</span>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <p className="font-semibold text-slate-600">{t.selectedImage}</p>
+                {file && (
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    {(file.size / (1024 * 1024)).toFixed(2)} MB
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold truncate px-1"
                   onClick={() => galleryRef.current?.click()}
                 >
                   {t.uploadPhoto}
                 </button>
                 <button
                   type="button"
-                  className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
+                  className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold truncate px-1"
                   onClick={openLiveCamera}
                 >
                   {t.takePhoto}
                 </button>
+                <button
+                  type="button"
+                  className="py-2.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 truncate px-1"
+                  onClick={deletePhoto}
+                  title={t.deletePhoto}
+                >
+                  <span>🗑️</span>
+                  <span>{t.deletePhoto}</span>
+                </button>
+              </div>
+
+              {/* Pre-Upload Security & Anti-Manipulation Notice */}
+              <div className="flex items-start gap-2 p-2.5 bg-slate-100/90 rounded-xl text-[11px] text-slate-600 border border-slate-200">
+                <span className="text-xs shrink-0">🔒</span>
+                <span className="leading-tight">{t.preUploadNotice}</span>
               </div>
             </div>
           )}
@@ -953,13 +1023,27 @@ export default function ReportPage() {
 
         {error && <p className="text-red-600 text-xs bg-red-50 p-2.5 rounded-xl border border-red-200">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={busy || !file}
-          className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl text-lg font-bold shadow transition"
-        >
-          {busy ? t.uploading : t.submit}
-        </button>
+        <div className="flex items-center gap-2">
+          {file && (
+            <button
+              type="button"
+              onClick={deletePhoto}
+              disabled={busy}
+              className="py-4 px-4 bg-slate-100 hover:bg-red-50 hover:text-red-700 hover:border-red-200 text-slate-600 border border-slate-200 rounded-xl text-sm font-semibold transition shrink-0 flex items-center gap-1.5 cursor-pointer"
+              title={t.deletePhoto}
+            >
+              <span>🗑️</span>
+              <span className="hidden sm:inline">{t.deletePhoto}</span>
+            </button>
+          )}
+          <button
+            type="submit"
+            disabled={busy || !file}
+            className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl text-lg font-bold shadow transition"
+          >
+            {busy ? t.uploading : t.submit}
+          </button>
+        </div>
       </form>
     </div>
   );

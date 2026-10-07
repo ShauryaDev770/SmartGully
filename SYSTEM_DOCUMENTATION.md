@@ -14,6 +14,7 @@ In traditional municipal setups, road damage reporting is cumbersome, lacks prec
    - **Automatic Device GPS**: Instant high-accuracy coordinate locking.
    - **Open-Source Address Geocoder**: Converts typed City Name and Address/Landmark to coordinates via OpenStreetMap Nominatim.
    - **Direct Coordinate Entry**: Manual Latitude and Longitude input with preset Indian city pickers.
+   - **Pre-Upload Deletion & Anti-Tampering Integrity**: Citizens have full control to preview, replace, or delete their photo/draft prior to submission. Once uploaded, reports are strictly immutable and cannot be deleted or manipulated to preserve civic data integrity and municipal accountability.
 2. **Instant Enqueueing**: Reports are ingested with `status="pending"`, immediate receipt verification, and zero blocking of the API.
 3. **Multi-Stage AI Worker**: An asynchronous background worker triages pending reports into clear actionable categories (**Red**: Urgent/Severe, **Yellow**: Minor/Review needed, **Green**: Ignored/Not a road/Duplicate) using explainable transparent rules.
 4. **Public Heatmap**: Processed reports are rendered on an interactive OpenStreetMap heatmap with dynamic crowd-validation weighting.
