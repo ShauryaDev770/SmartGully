@@ -45,7 +45,19 @@ def run_once(db) -> bool:
             report.lng,
             report.accuracy_m,
             hashes,
+            source=report.source or "manual",
         )
+        if result["category"] == "green" and (report.source or "manual") == "auto":
+            img = _image_abs(report.image_path)
+            try:
+                if img.exists():
+                    img.unlink()
+            except OSError:
+                pass
+            db.delete(report)
+            db.commit()
+            log.info("deleted green auto frame %s", report.id)
+            return True
         report.category = result["category"]
         report.pothole_conf = result["pothole_conf"]
         report.pothole_count = result["pothole_count"]
@@ -54,9 +66,10 @@ def run_once(db) -> bool:
         report.ai_gen_score = result["ai_gen_score"]
         report.phash = result["phash"]
         report.reason = result["reason"]
+        report.hazard_type = result.get("hazard_type")
         report.status = "processed"
         db.commit()
-        log.info("processed %s -> %s (%s)", report.id, report.category, report.reason)
+        log.info("processed %s -> %s %s (%s)", report.id, report.category, report.hazard_type, report.reason)
     except Exception:
         log.exception("failed to process %s", report.id)
         report.status = "failed"

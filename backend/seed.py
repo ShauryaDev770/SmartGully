@@ -10,7 +10,7 @@ BACKEND_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BACKEND_DIR))
 
 from app.config import UPLOAD_DIR
-from app.db import Base, SessionLocal, engine
+from app.db import Base, SessionLocal, engine, migrate_schema
 from app.models import Report
 
 CITIES = [
@@ -50,6 +50,42 @@ REASONS = {
     "pending": None,
 }
 
+HAZARD_FOR_CAT = {
+    "red": "pothole",
+    "yellow": "rough_patch",
+    "green": "pothole",
+    "pending": None,
+}
+
+# Delhi route corridor (Connaught Place to India Gate) along public/demo_track.json
+TRACK_START = (28.6304, 77.2177)
+TRACK_HAZARDS = (
+    {
+        "id": "demo-track-bump-1",
+        "lat": 28.630768,
+        "lng": 77.215281,
+        "category": "yellow",
+        "hazard_type": "speed_bump",
+        "reason": "[demo track] Speed bump on road",
+    },
+    {
+        "id": "demo-track-pothole-1",
+        "lat": 28.629075,
+        "lng": 77.211480,
+        "category": "red",
+        "hazard_type": "pothole",
+        "reason": "[demo track] Severe pothole on carriage lane",
+    },
+    {
+        "id": "demo-track-broken-1",
+        "lat": 28.626514,
+        "lng": 77.207513,
+        "category": "yellow",
+        "hazard_type": "broken_road",
+        "reason": "[demo track] Broken road surface",
+    },
+)
+
 COLORS = {
     "red": (180, 40, 40),
     "yellow": (200, 170, 40),
@@ -67,14 +103,54 @@ def make_image(path: Path, color):
     img.save(path, "JPEG", quality=80)
 
 
+def seed_track_hazards(db):
+    added = 0
+    now = datetime.now(timezone.utc)
+    for item in TRACK_HAZARDS:
+        if db.get(Report, item["id"]):
+            continue
+        rel = f"uploads/{item['id']}.jpg"
+        make_image(UPLOAD_DIR / f"{item['id']}.jpg", COLORS[item["category"]])
+        db.add(
+            Report(
+                id=item["id"],
+                image_path=rel,
+                lat=item["lat"],
+                lng=item["lng"],
+                accuracy_m=8.0,
+                created_at=now,
+                status="processed",
+                category=item["category"],
+                pothole_conf=0.8 if item["category"] == "red" else 0.45,
+                pothole_count=2 if item["category"] == "red" else 1,
+                area_ratio=0.08 if item["category"] == "red" else 0.02,
+                road_score=0.85,
+                ai_gen_score=0.05,
+                phash=item["id"][:16],
+                cluster_key=f"{round(item['lat'], 4)}_{round(item['lng'], 4)}",
+                confirmations=2,
+                reason=item["reason"],
+                hazard_type=item["hazard_type"],
+                source="manual",
+                is_demo=1,
+                gone_count=0,
+            )
+        )
+        added += 1
+    return added
+
+
 def main():
     random.seed(42)
     Base.metadata.create_all(bind=engine)
+    migrate_schema()
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     db = SessionLocal()
     existing = db.query(Report).count()
+    track_added = seed_track_hazards(db)
+    db.commit()
     if existing:
-        print(f"Database already has {existing} reports. Delete smartgully.db to reseed.")
+        print(f"Database already has {existing} reports. Added {track_added} demo-track hazards.")
         db.close()
         return
 
@@ -107,6 +183,10 @@ def main():
                 cluster_key=f"{round(lat, 4)}_{round(lng, 4)}",
                 confirmations=random.randint(0, 6) if category == "red" else random.randint(0, 2),
                 reason=None if status == "pending" else f"[demo {city}] {REASONS[category]}",
+                hazard_type=HAZARD_FOR_CAT[category],
+                source="manual",
+                is_demo=1,
+                gone_count=0,
             )
         )
     db.commit()

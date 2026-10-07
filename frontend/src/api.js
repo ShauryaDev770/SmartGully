@@ -27,7 +27,7 @@ export async function fetchReport(id) {
   return data;
 }
 
-export async function createReport({ file, lat, lng, accuracy_m }) {
+export async function createReport({ file, lat, lng, accuracy_m, source }) {
   const form = new FormData();
   form.append("image", file);
   form.append("lat", String(lat));
@@ -35,6 +35,7 @@ export async function createReport({ file, lat, lng, accuracy_m }) {
   if (accuracy_m != null && accuracy_m !== "") {
     form.append("accuracy_m", String(accuracy_m));
   }
+  if (source) form.append("source", source);
   const { data } = await client.post("/api/reports", form);
   return data;
 }
@@ -46,6 +47,26 @@ export async function confirmReport(id) {
 
 export async function fetchStats() {
   const { data } = await client.get("/api/stats");
+  return data;
+}
+
+export async function fetchNearbyHazards({ lat, lng, radius_m = 1000 }) {
+  const { data } = await client.get("/api/hazards/nearby", {
+    params: { lat, lng, radius_m },
+  });
+  return data;
+}
+
+export async function compareRoutes({ from, to }) {
+  const { data } = await client.post("/api/routes/compare", {
+    from,
+    to,
+  });
+  return data;
+}
+
+export async function markGone(id) {
+  const { data } = await client.post(`/api/reports/${id}/gone`);
   return data;
 }
 

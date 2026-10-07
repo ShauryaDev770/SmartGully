@@ -60,6 +60,10 @@ def export_csv(db: Session = Depends(get_db)):
         "confirmations",
         "reason",
         "image_path",
+        "hazard_type",
+        "source",
+        "is_demo",
+        "gone_count",
     ]
     writer = csv.DictWriter(buf, fieldnames=fields)
     writer.writeheader()

@@ -21,8 +21,9 @@ from app.config import (
     UPLOADS_PER_HOUR,
 )
 from app.db import get_db
+from app.geo import heat_weight
 from app.models import Report
-from app.schemas import ConfirmResponse, ReportCreateResponse, ReportOut
+from app.schemas import ConfirmResponse, GoneResponse, ReportCreateResponse, ReportOut
 
 router = APIRouter()
 _ip_hits: dict[str, deque] = defaultdict(deque)
@@ -33,11 +34,6 @@ ALLOWED_EXT = {".jpg", ".jpeg", ".png"}
 
 def cluster_key(lat: float, lng: float) -> str:
     return f"{round(lat, 4)}_{round(lng, 4)}"
-
-
-def heat_weight(category: str | None, confirmations: int) -> float:
-    base = 1.0 if category == "red" else 0.5
-    return min(3.0, base * (1 + 0.25 * confirmations))
 
 
 def image_url(image_path: str) -> str:
@@ -90,6 +86,10 @@ def _report_to_out(report: Report) -> ReportOut:
         confirmations=report.confirmations,
         reason=report.reason,
         image_url=image_url(report.image_path),
+        hazard_type=report.hazard_type,
+        source=report.source or "manual",
+        is_demo=bool(report.is_demo),
+        gone_count=report.gone_count or 0,
     )
 
 
@@ -101,8 +101,13 @@ async def create_report(
     lat: float = Form(...),
     lng: float = Form(...),
     accuracy_m: float | None = Form(default=None),
+    source: str = Form(default="manual"),
 ):
-    _rate_limit(_client_ip(request))
+    src = (source or "manual").strip().lower()
+    if src not in {"manual", "auto", "bump"}:
+        raise HTTPException(status_code=422, detail="source must be manual, auto, or bump.")
+    if src == "manual":
+        _rate_limit(_client_ip(request))
     _validate_coords(lat, lng)
 
     content_type = (image.content_type or "").lower()
@@ -134,6 +139,10 @@ async def create_report(
         status="pending",
         cluster_key=cluster_key(lat, lng),
         confirmations=0,
+        source=src,
+        is_demo=0,
+        gone_count=0,
+        hazard_type="speed_bump" if src == "bump" else None,
     )
     db.add(report)
     db.commit()
@@ -194,7 +203,10 @@ def list_reports(
                     "created_at": report.created_at.isoformat() if report.created_at else None,
                     "confirmations": report.confirmations,
                     "image_url": image_url(report.image_path),
-                    "weight": heat_weight(report.category, report.confirmations),
+                    "weight": heat_weight(report.category, report.confirmations, report.hazard_type),
+                    "hazard_type": report.hazard_type or "pothole",
+                    "source": report.source or "manual",
+                    "is_demo": bool(report.is_demo),
                     "pothole_conf": report.pothole_conf,
                     "pothole_count": report.pothole_count,
                     "area_ratio": report.area_ratio,
@@ -223,3 +235,17 @@ def confirm_report(report_id: str, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(report)
     return ConfirmResponse(id=report.id, confirmations=report.confirmations)
+
+
+@router.post("/reports/{report_id}/gone", response_model=GoneResponse)
+def mark_gone(report_id: str, db: Session = Depends(get_db)):
+    report = db.get(Report, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    report.gone_count = (report.gone_count or 0) + 1
+    repaired = report.gone_count >= 2
+    if repaired:
+        report.status = "repaired"
+    db.commit()
+    db.refresh(report)
+    return GoneResponse(id=report.id, gone_count=report.gone_count, repaired=repaired)

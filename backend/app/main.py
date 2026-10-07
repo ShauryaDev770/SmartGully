@@ -3,11 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import FRONTEND_ORIGIN, UPLOAD_DIR
-from app.db import Base, engine
+from app.db import Base, engine, migrate_schema
 from app.models import Report  # noqa: F401
 from app.routes.reports import router as reports_router
 from app.routes.stats import router as stats_router
 from app.routes.geocode import router as geocode_router
+from app.routes.hazards import router as hazards_router
+from app.routes.routes import router as routes_router
 from app.schemas import HealthResponse
 
 app = FastAPI(title="SmartGully")
@@ -22,10 +24,13 @@ app.add_middleware(
 
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 Base.metadata.create_all(bind=engine)
+migrate_schema()
 
 app.include_router(reports_router, prefix="/api")
 app.include_router(stats_router, prefix="/api")
 app.include_router(geocode_router, prefix="/api")
+app.include_router(hazards_router, prefix="/api")
+app.include_router(routes_router, prefix="/api")
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 

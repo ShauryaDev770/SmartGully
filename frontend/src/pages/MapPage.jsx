@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CircleMarker, MapContainer, Popup, TileLayer, ZoomControl, useMapEvents } from "react-leaflet";
 import HeatLayer from "../components/HeatLayer.jsx";
 import CategoryBadge from "../components/CategoryBadge.jsx";
@@ -20,6 +21,7 @@ function MapEvents({ onMove }) {
 }
 
 export default function MapPage() {
+  const navigate = useNavigate();
   const [showHeat, setShowHeat] = useState(true);
   const [cats, setCats] = useState({ red: true, yellow: true, green: false });
   const [features, setFeatures] = useState([]);
@@ -213,7 +215,14 @@ export default function MapPage() {
                 <Popup>
                   <div className="w-56 space-y-2 p-1 text-slate-800">
                     <div className="flex items-center justify-between gap-1">
-                      <CategoryBadge category={p.category} />
+                      <div className="flex items-center gap-1.5">
+                        <CategoryBadge category={p.category} />
+                        {p.is_demo && (
+                          <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-300">
+                            demo
+                          </span>
+                        )}
+                      </div>
                       {formattedDate && <span className="text-[11px] text-slate-500">{formattedDate}</span>}
                     </div>
 
@@ -257,6 +266,26 @@ export default function MapPage() {
           })
         )}
       </MapContainer>
+
+      {/* Floating Action Buttons */}
+      <div className="absolute bottom-5 inset-x-4 sm:inset-x-auto sm:right-6 z-[1000] flex items-center justify-center gap-3 pointer-events-auto">
+        <button
+          type="button"
+          onClick={() => navigate("/navigate")}
+          className="flex-1 sm:flex-none px-5 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm rounded-2xl shadow-xl shadow-blue-950/40 transition active:scale-95 flex items-center justify-center gap-2 border border-blue-400/30"
+        >
+          <span>🧭</span>
+          <span>Directions & Navigation</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate("/report")}
+          className="flex-1 sm:flex-none px-5 py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-sm rounded-2xl shadow-xl shadow-slate-950/40 transition active:scale-95 flex items-center justify-center gap-2 border border-slate-700"
+        >
+          <span>📷</span>
+          <span>Report pothole</span>
+        </button>
+      </div>
     </div>
   );
 }

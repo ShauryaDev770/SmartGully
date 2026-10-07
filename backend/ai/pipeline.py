@@ -5,7 +5,7 @@ from PIL import Image
 import imagehash
 
 from app.config import PHASH_HAMMING_MAX, USE_DUMMY_AI
-from ai.rules import decide
+from ai.rules import decide, decide_v2
 from ai.vlm import get_vlm_opinion
 
 
@@ -62,11 +62,25 @@ def _dummy_result(accuracy_m, is_duplicate: bool = False) -> dict:
         "ai_gen_score": 0.1,
         "phash": None,
         "reason": reasons[category],
+        "hazard_type": None if category == "green" else ("pothole" if category == "red" else random.choice(["rough_patch", "pothole", "speed_bump"])),
     }
 
 
-def process_report(image_path, lat, lng, accuracy_m, existing_phashes) -> dict:
+def process_report(image_path, lat, lng, accuracy_m, existing_phashes, source="manual") -> dict:
     path = Path(image_path)
+    if source == "bump":
+        calc_phash = _compute_phash(path) if path.exists() else "bump"
+        return {
+            "category": "yellow",
+            "pothole_conf": 0.0,
+            "pothole_count": 0,
+            "area_ratio": 0.0,
+            "road_score": 0.8,
+            "ai_gen_score": 0.0,
+            "phash": calc_phash,
+            "reason": "Motion bump detected",
+            "hazard_type": "speed_bump",
+        }
     if USE_DUMMY_AI or not path.exists():
         calc_phash = _compute_phash(path) if path.exists() else "dummy"
         is_dup = _check_duplicate(calc_phash, existing_phashes or [])
@@ -85,7 +99,7 @@ def process_report(image_path, lat, lng, accuracy_m, existing_phashes) -> dict:
     road = road_score(str(path))
     det = detect(str(path))
     auth = analyse(str(path), existing_phashes or [])
-    category, reason = decide(
+    category, reason, hazard_type = decide_v2(
         road,
         det["pothole_conf"],
         det["pothole_count"],
@@ -93,6 +107,7 @@ def process_report(image_path, lat, lng, accuracy_m, existing_phashes) -> dict:
         auth["ai_gen_score"],
         auth["is_duplicate"],
         accuracy_m,
+        source=source,
     )
     if category == "yellow":
         vlm_text = get_vlm_opinion(str(path))
@@ -108,4 +123,5 @@ def process_report(image_path, lat, lng, accuracy_m, existing_phashes) -> dict:
         "ai_gen_score": auth["ai_gen_score"],
         "phash": auth["phash"],
         "reason": reason,
+        "hazard_type": hazard_type,
     }

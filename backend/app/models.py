@@ -30,6 +30,10 @@ class Report(Base):
     cluster_key: Mapped[str] = mapped_column(String, nullable=False)
     confirmations: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    hazard_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    source: Mapped[str] = mapped_column(String, nullable=False, default="manual")
+    is_demo: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    gone_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     __table_args__ = (
         Index("ix_reports_status", "status"),

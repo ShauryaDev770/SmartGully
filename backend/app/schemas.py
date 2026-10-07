@@ -31,6 +31,10 @@ class ReportOut(BaseModel):
     confirmations: int
     reason: str | None
     image_url: str
+    hazard_type: str | None = None
+    source: str = "manual"
+    is_demo: bool = False
+    gone_count: int = 0
 
     class Config:
         from_attributes = True
@@ -53,3 +57,9 @@ class StatsResponse(BaseModel):
 class ConfirmResponse(BaseModel):
     id: str
     confirmations: int
+
+
+class GoneResponse(BaseModel):
+    id: str
+    gone_count: int
+    repaired: bool
