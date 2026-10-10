@@ -1,6 +1,7 @@
 # SmartGully
 
 Public website for reporting potholes and broken roads in India. Citizens upload a photo plus GPS; an AI worker triages each report into red / yellow / green; a public heatmap shows processed reports.
+Along with a Navigation System just like Google Maps that can warn the user about the upcoming pothole or broken road so that they can slow down and protect themselves from any kind of accident.
 
 ## Run locally
 
